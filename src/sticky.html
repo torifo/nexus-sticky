@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus Sticky</title>
+  <link rel="stylesheet" href="sticky.css">
+</head>
+<body>
+  <div class="sticky-window" id="sticky-window">
+
+    <!-- カスタムタイトルバー（ドラッグ可能）(Requirement 3.2, 3.3) -->
+    <div class="title-bar" data-tauri-drag-region id="title-bar">
+      <div class="title-bar-drag" data-tauri-drag-region></div>
+      <div class="controls">
+        <button id="pin-btn" class="ctrl-btn pin-btn" title="常に最前面">📌</button>
+        <button id="color-btn" class="ctrl-btn" title="背景色">🎨</button>
+        <button id="opacity-btn" class="ctrl-btn" title="透過率">👁</button>
+        <button id="minimize-btn" class="ctrl-btn" title="最小化">—</button>
+        <button id="close-btn" class="ctrl-btn close-btn" title="閉じる">✕</button>
+      </div>
+    </div>
+
+    <!-- 色選択パネル（Requirement 12.1） -->
+    <div class="color-panel" id="color-panel" hidden>
+      <div class="color-grid">
+        <button class="color-swatch" style="background:#FFEB3B" data-color="#FFEB3B" title="黄色"></button>
+        <button class="color-swatch" style="background:#FF8F00" data-color="#FF8F00" title="オレンジ"></button>
+        <button class="color-swatch" style="background:#F48FB1" data-color="#F48FB1" title="ピンク"></button>
+        <button class="color-swatch" style="background:#CE93D8" data-color="#CE93D8" title="パープル"></button>
+        <button class="color-swatch" style="background:#90CAF9" data-color="#90CAF9" title="ブルー"></button>
+        <button class="color-swatch" style="background:#A5D6A7" data-color="#A5D6A7" title="グリーン"></button>
+        <button class="color-swatch" style="background:#BCAAA4" data-color="#BCAAA4" title="ブラウン"></button>
+        <button class="color-swatch" style="background:#ECEFF1" data-color="#ECEFF1" title="ホワイト"></button>
+      </div>
+    </div>
+
+    <!-- 透過率スライダー（Requirement 5） -->
+    <div class="opacity-panel" id="opacity-panel" hidden>
+      <label for="opacity-slider">透過率</label>
+      <input type="range" id="opacity-slider" min="20" max="100" value="95" step="5">
+      <span id="opacity-value">95%</span>
+    </div>
+
+    <!-- テキスト入力エリア（Requirement 11） -->
+    <textarea
+      id="content"
+      class="content-area"
+      placeholder="メモを入力..."
+      maxlength="10000"
+      spellcheck="false"
+    ></textarea>
+
+    <!-- 文字数カウント（Requirement 11.5） -->
+    <div class="char-count" id="char-count">0 / 10000</div>
+
+  </div>
+  <script src="sticky.js"></script>
+</body>
+</html>

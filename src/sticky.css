@@ -1,0 +1,204 @@
+/* =============================================
+   Nexus Sticky - フレームレスウィンドウスタイル
+   ============================================= */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Segoe UI', 'Meiryo', sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+/* ウィンドウ全体 */
+.sticky-window {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  background-color: #FFEB3B; /* デフォルト色（Requirement 12.4） */
+  transition: background-color 0.2s ease;
+}
+
+/* ─── タイトルバー（Requirement 3.2, 3.3） ─── */
+.title-bar {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 6px;
+  background-color: rgba(0, 0, 0, 0.08);
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.title-bar:active {
+  cursor: grabbing;
+}
+
+.title-bar-drag {
+  flex: 1;
+  height: 100%;
+}
+
+.controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ctrl-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+
+.ctrl-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.close-btn:hover {
+  background: rgba(220, 50, 50, 0.25);
+}
+
+/* ピン留め中はハイライト */
+.pin-btn.active {
+  background: rgba(0, 100, 255, 0.18);
+}
+
+/* ─── 色選択パネル（Requirement 12.1） ─── */
+.color-panel {
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.color-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.color-swatch:hover {
+  border-color: rgba(0, 0, 0, 0.4);
+  transform: scale(1.1);
+}
+
+.color-swatch.selected {
+  border-color: rgba(0, 0, 0, 0.6);
+}
+
+/* ─── 透過率パネル（Requirement 5） ─── */
+.opacity-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 11px;
+}
+
+.opacity-panel label {
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+#opacity-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: rgba(0, 0, 0, 0.5);
+}
+
+#opacity-value {
+  min-width: 32px;
+  text-align: right;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── テキストエリア（Requirement 11） ─── */
+.content-area {
+  flex: 1;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: none;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.85);
+  user-select: text;
+  cursor: text;
+  overflow-y: auto;
+}
+
+.content-area::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+/* ─── 文字数カウント（Requirement 11.5） ─── */
+.char-count {
+  padding: 2px 8px;
+  font-size: 10px;
+  text-align: right;
+  color: rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.char-count.warning {
+  color: rgba(200, 0, 0, 0.75);
+  font-weight: bold;
+}
+
+/* ─── スクロールバー ─── */
+.content-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.content-area::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+/* ─── アニメーション ─── */
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.char-count.limit-reached {
+  animation: flash 0.4s ease 2;
+}

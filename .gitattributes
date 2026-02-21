@@ -1,0 +1,24 @@
+# テキストファイルの改行コードを自動正規化
+* text=auto
+
+# Windows スクリプトは CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Unix スクリプトは LF
+*.sh  text eol=lf
+Makefile text eol=lf
+
+# Rust / Web ソース
+*.rs   text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+
+# バイナリ
+*.png binary
+*.ico binary
+*.icns binary
