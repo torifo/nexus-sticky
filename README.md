@@ -48,7 +48,7 @@ Rust (Tauri 2.0) バックエンドが複数の付箋ウィンドウを一元管
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/nexus-sticky.git
+git clone https://github.com/torifo/nexus-sticky.git
 cd nexus-sticky
 ```
 

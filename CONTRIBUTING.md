@@ -10,7 +10,7 @@
 ### 初回セットアップ
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/nexus-sticky.git
+git clone https://github.com/torifo/nexus-sticky.git
 cd nexus-sticky
 bash scripts/setup-wsl.sh   # 依存パッケージ + Tauri CLI を自動インストール
 ```
