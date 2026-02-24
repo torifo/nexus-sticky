@@ -101,6 +101,14 @@ async fn update_position(
     nexus.update_position(&window_id, x, y)
 }
 
+/// 最後に閉じた付箋を復元する
+#[tauri::command]
+async fn restore_last_closed(
+    nexus: State<'_, Arc<NexusManager>>,
+) -> Result<String, NexusError> {
+    nexus.restore_last_closed()
+}
+
 /// ウィンドウサイズをバックエンドに通知する
 #[tauri::command]
 async fn update_size(
@@ -178,6 +186,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             create_sticky_window,
             close_window,
+            restore_last_closed,
             get_window_id,
             get_window_state,
             update_content,

@@ -66,6 +66,7 @@ impl StickyWindowState {
 pub struct AppState {
     pub windows: HashMap<String, StickyWindowState>,
     pub next_window_id: u32,
+    pub recently_closed: Vec<WindowData>, // 直近の閉じた付箋（最大5件）
 }
 
 impl AppState {
@@ -73,6 +74,7 @@ impl AppState {
         AppState {
             windows: HashMap::new(),
             next_window_id: 1,
+            recently_closed: Vec::new(),
         }
     }
 
@@ -184,7 +186,13 @@ impl NexusManager {
     pub fn remove_window(&self, window_id: &str) -> Result<(), NexusError> {
         {
             let mut state = self.state.lock().unwrap();
-            state.windows.remove(window_id);
+            if let Some(window_state) = state.windows.remove(window_id) {
+                // 直近の閉じた付箋として保存（最大5件）
+                state.recently_closed.push(window_state.to_window_data());
+                if state.recently_closed.len() > 5 {
+                    state.recently_closed.remove(0);
+                }
+            }
             // 既に存在しない場合もエラーにしない（二重削除対策）
         }
 
@@ -363,6 +371,23 @@ impl NexusManager {
                 MAX_FAILURE_COUNT
             );
             let _ = self.remove_window(window_id);
+        }
+    }
+
+    /// 最後に閉じた付箋を復元する
+    pub fn restore_last_closed(&self) -> Result<String, NexusError> {
+        let data = {
+            let mut state = self.state.lock().unwrap();
+            state.recently_closed.pop()
+        };
+        match data {
+            Some(window_data) => {
+                log::info!("Restoring last closed sticky");
+                self.create_sticky_window(Some(window_data))
+            }
+            None => Err(NexusError::WindowNotFound(
+                "閉じた付箋の履歴がありません".to_string(),
+            )),
         }
     }
 

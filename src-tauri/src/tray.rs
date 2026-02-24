@@ -16,11 +16,13 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         MenuItem::with_id(app, "show_all", "全て表示", true, None::<&str>)?;
     let hide_all =
         MenuItem::with_id(app, "hide_all", "全て非表示", true, None::<&str>)?;
+    let restore_last =
+        MenuItem::with_id(app, "restore_last", "最後に閉じた付箋を復元", true, None::<&str>)?;
     let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
     let quit =
         MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
 
-    let menu = Menu::with_items(app, &[&new_sticky, &show_all, &hide_all, &separator, &quit])?;
+    let menu = Menu::with_items(app, &[&new_sticky, &show_all, &hide_all, &restore_last, &separator, &quit])?;
 
     // トレイアイコンを構築 (Requirement 6.1)
     // デフォルトウィンドウアイコン、またはフォールバック黄色アイコンを使用
@@ -70,6 +72,14 @@ fn handle_menu_event(app: &AppHandle, event_id: &str) {
             log::info!("Tray: hiding all windows");
             if let Err(e) = nexus.hide_all_windows() {
                 log::error!("Tray: failed to hide all windows: {}", e);
+            }
+        }
+
+        // 最後に閉じた付箋を復元する
+        "restore_last" => {
+            log::info!("Tray: restoring last closed sticky");
+            if let Err(e) = nexus.restore_last_closed() {
+                log::warn!("Tray: no recently closed sticky to restore: {}", e);
             }
         }
 
