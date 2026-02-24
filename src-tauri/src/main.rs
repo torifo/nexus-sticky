@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State, WebviewWindow};
 
 use error::NexusError;
-use nexus::{AppState, NexusManager};
+use nexus::{AppState, ClosedWindowRecord, NexusManager};
 use workspace::WorkspaceManager;
 
 // ─────────────────────────────────────────────
@@ -109,6 +109,31 @@ async fn restore_last_closed(
     nexus.restore_last_closed()
 }
 
+/// 最近閉じた付箋の一覧を返す（履歴ウィンドウ用）
+#[tauri::command]
+async fn get_recently_closed(
+    nexus: State<'_, Arc<NexusManager>>,
+) -> Result<Vec<ClosedWindowRecord>, NexusError> {
+    Ok(nexus.get_recently_closed())
+}
+
+/// インデックス指定で付箋を復元する
+#[tauri::command]
+async fn restore_by_index(
+    index: usize,
+    nexus: State<'_, Arc<NexusManager>>,
+) -> Result<String, NexusError> {
+    nexus.restore_by_index(index)
+}
+
+/// 履歴ウィンドウを開く
+#[tauri::command]
+async fn open_history_window(
+    nexus: State<'_, Arc<NexusManager>>,
+) -> Result<(), NexusError> {
+    nexus.open_history_window()
+}
+
 /// ウィンドウサイズをバックエンドに通知する
 #[tauri::command]
 async fn update_size(
@@ -187,6 +212,9 @@ fn main() {
             create_sticky_window,
             close_window,
             restore_last_closed,
+            get_recently_closed,
+            restore_by_index,
+            open_history_window,
             get_window_id,
             get_window_state,
             update_content,

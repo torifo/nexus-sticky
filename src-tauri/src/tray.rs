@@ -12,17 +12,20 @@ use crate::workspace::WorkspaceManager;
 pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let new_sticky =
         MenuItem::with_id(app, "new_sticky", "新規付箋作成", true, None::<&str>)?;
+    let history =
+        MenuItem::with_id(app, "history", "最近の付箋", true, None::<&str>)?;
     let show_all =
         MenuItem::with_id(app, "show_all", "全て表示", true, None::<&str>)?;
     let hide_all =
         MenuItem::with_id(app, "hide_all", "全て非表示", true, None::<&str>)?;
     let restore_last =
         MenuItem::with_id(app, "restore_last", "最後に閉じた付箋を復元", true, None::<&str>)?;
-    let separator = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let sep2 = tauri::menu::PredefinedMenuItem::separator(app)?;
     let quit =
         MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;
 
-    let menu = Menu::with_items(app, &[&new_sticky, &show_all, &hide_all, &restore_last, &separator, &quit])?;
+    let sep1 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let menu = Menu::with_items(app, &[&new_sticky, &history, &sep1, &show_all, &hide_all, &restore_last, &sep2, &quit])?;
 
     // トレイアイコンを構築 (Requirement 6.1)
     // デフォルトウィンドウアイコン、またはフォールバック黄色アイコンを使用
@@ -72,6 +75,14 @@ fn handle_menu_event(app: &AppHandle, event_id: &str) {
             log::info!("Tray: hiding all windows");
             if let Err(e) = nexus.hide_all_windows() {
                 log::error!("Tray: failed to hide all windows: {}", e);
+            }
+        }
+
+        // 履歴ウィンドウを開く
+        "history" => {
+            log::info!("Tray: opening history window");
+            if let Err(e) = nexus.open_history_window() {
+                log::error!("Tray: failed to open history window: {}", e);
             }
         }
 

@@ -1,11 +1,21 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::error::NexusError;
 use crate::event::{EventBus, StickyEvent};
 use crate::validator::WindowValidator;
 use crate::workspace::{WindowData, Workspace};
+
+/// 閉じた付箋の履歴レコード（タイムスタンプ・プレビュー付き）
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ClosedWindowRecord {
+    pub data: WindowData,
+    pub closed_at: u64,  // Unix タイムスタンプ（秒）
+    pub preview: String, // 先頭40文字のプレビュー
+}
 
 pub const DEFAULT_COLOR: &str = "#FFEB3B"; // Requirement 12.4
 pub const DEFAULT_OPACITY: f64 = 0.95;     // Requirement 5.3
@@ -66,7 +76,7 @@ impl StickyWindowState {
 pub struct AppState {
     pub windows: HashMap<String, StickyWindowState>,
     pub next_window_id: u32,
-    pub recently_closed: Vec<WindowData>, // 直近の閉じた付箋（最大5件）
+    pub recently_closed: Vec<ClosedWindowRecord>, // 直近の閉じた付箋（最大20件）
 }
 
 impl AppState {
@@ -187,9 +197,17 @@ impl NexusManager {
         {
             let mut state = self.state.lock().unwrap();
             if let Some(window_state) = state.windows.remove(window_id) {
-                // 直近の閉じた付箋として保存（最大5件）
-                state.recently_closed.push(window_state.to_window_data());
-                if state.recently_closed.len() > 5 {
+                let closed_at = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                let preview = window_state.content.chars().take(40).collect();
+                state.recently_closed.push(ClosedWindowRecord {
+                    data: window_state.to_window_data(),
+                    closed_at,
+                    preview,
+                });
+                if state.recently_closed.len() > 20 {
                     state.recently_closed.remove(0);
                 }
             }
@@ -374,11 +392,11 @@ impl NexusManager {
         }
     }
 
-    /// 最後に閉じた付箋を復元する
+    /// 最後に閉じた付箋を復元する（トレイの「最後に閉じた付箋を復元」用）
     pub fn restore_last_closed(&self) -> Result<String, NexusError> {
         let data = {
             let mut state = self.state.lock().unwrap();
-            state.recently_closed.pop()
+            state.recently_closed.pop().map(|r| r.data)
         };
         match data {
             Some(window_data) => {
@@ -389,6 +407,47 @@ impl NexusManager {
                 "閉じた付箋の履歴がありません".to_string(),
             )),
         }
+    }
+
+    /// 最近閉じた付箋の一覧を新しい順で返す（履歴ウィンドウ用）
+    pub fn get_recently_closed(&self) -> Vec<ClosedWindowRecord> {
+        let state = self.state.lock().unwrap();
+        state.recently_closed.iter().rev().cloned().collect()
+    }
+
+    /// インデックス指定で閉じた付箋を復元する（新しい順での 0-based index）
+    pub fn restore_by_index(&self, index: usize) -> Result<String, NexusError> {
+        let data = {
+            let mut state = self.state.lock().unwrap();
+            let len = state.recently_closed.len();
+            if index >= len {
+                return Err(NexusError::WindowNotFound(
+                    format!("インデックス {} は範囲外です（{}件）", index, len),
+                ));
+            }
+            let actual = len - 1 - index; // 新しい順→内部の古い順インデックスに変換
+            state.recently_closed.remove(actual).data
+        };
+        log::info!("Restoring sticky from history (index {})", index);
+        self.create_sticky_window(Some(data))
+    }
+
+    /// 履歴ウィンドウを開く（既に開いていればフォーカス）
+    pub fn open_history_window(&self) -> Result<(), NexusError> {
+        if let Some(win) = self.app_handle.get_webview_window("history") {
+            win.set_focus().map_err(|e| NexusError::Tauri(e.to_string()))?;
+            return Ok(());
+        }
+        let url = WebviewUrl::App("history.html".into());
+        WebviewWindowBuilder::new(&self.app_handle, "history", url)
+            .title("最近の付箋")
+            .inner_size(300.0, 420.0)
+            .decorations(false)
+            .transparent(cfg!(not(target_os = "linux")))
+            .resizable(false)
+            .build()
+            .map_err(|e| NexusError::WindowCreationFailed(e.to_string()))?;
+        Ok(())
     }
 
     /// 全ウィンドウIDのリストを返す
