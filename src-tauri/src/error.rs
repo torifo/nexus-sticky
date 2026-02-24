@@ -17,6 +17,7 @@ pub enum NexusError {
     #[error("Workspace deserialization failed: {0}")]
     DeserializationFailed(String),
 
+    #[allow(dead_code)]
     #[error("Timeout: {0}")]
     Timeout(String),
 

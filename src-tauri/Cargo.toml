@@ -2,7 +2,7 @@
 name = "nexus-sticky"
 version = "0.1.0"
 description = "Nexus-Sticky: Multi-window sticky note application"
-authors = []
+authors = ["torifo"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

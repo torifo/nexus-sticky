@@ -29,6 +29,7 @@ impl StickyEvent {
         }
     }
 
+    #[allow(dead_code)]
     pub fn window_id(&self) -> &str {
         match self {
             StickyEvent::ContentChanged { window_id, .. } => window_id,
@@ -95,6 +96,7 @@ impl EventBus {
 
     /// ソースウィンドウ以外の全ウィンドウにイベントを配信する
     /// 失敗したウィンドウをリストで返す (Requirement 10.2)
+    #[allow(dead_code)]
     pub fn emit_to_others(
         &self,
         source_window_id: &str,

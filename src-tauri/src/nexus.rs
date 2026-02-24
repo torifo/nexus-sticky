@@ -11,6 +11,7 @@ pub const DEFAULT_COLOR: &str = "#FFEB3B"; // Requirement 12.4
 pub const DEFAULT_OPACITY: f64 = 0.95;     // Requirement 5.3
 const DEFAULT_WIDTH: u32 = 300;
 const DEFAULT_HEIGHT: u32 = 250;
+#[allow(dead_code)]
 const MAX_FAILURE_COUNT: u32 = 3; // Requirement 10.4
 
 /// 個別付箋ウィンドウのランタイム状態 (Requirement 1.2)
@@ -25,6 +26,7 @@ pub struct StickyWindowState {
     pub color: String,
     pub opacity: f64,
     pub pinned: bool,
+    #[allow(dead_code)]
     pub failure_count: u32, // Requirement 10.4
 }
 
@@ -99,6 +101,7 @@ impl NexusManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
@@ -341,6 +344,7 @@ impl NexusManager {
     }
 
     /// ウィンドウの失敗カウントを増やし、閾値超過で除去する (Requirement 10.4)
+    #[allow(dead_code)]
     pub fn record_window_failure(&self, window_id: &str) {
         let should_remove = {
             let mut state = self.state.lock().unwrap();
