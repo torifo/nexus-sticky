@@ -39,15 +39,9 @@ if (-not $wslAppPath) {
     exit 1
 }
 
-# ── 一時起動スクリプトを WSL 側に書き出す ─────────────────────────────────
-# Start-Process への複雑な引数渡しを避けるため、コマンドをファイルに書いてから実行する
-$launchScript = "/tmp/.nexus-sticky-launch.sh"
-$createCmd = "printf '#!/bin/bash\nWEBKIT_DISABLE_COMPOSITING_MODE=1 RUST_LOG=warn $wslAppPath >>/tmp/nexus-sticky.log 2>&1\n' > $launchScript && chmod +x $launchScript"
-wsl -d $WslDist bash -c $createCmd 2>$null
-
-# ── Start-Process で WSL を独立プロセスとして起動 ─────────────────────────
-# アプリをフォアグラウンドで実行 → WSL プロセスがアプリと同じ寿命を持つ
-# -WindowStyle Hidden で WSL コンソールウィンドウを非表示にする
-Start-Process -FilePath "wsl.exe" `
-    -ArgumentList @("-d", $WslDist, "bash", $launchScript) `
-    -WindowStyle Hidden
+# ── WScript.Shell.Run で WSL を完全非表示起動 ─────────────────────────────
+# Start-Process -WindowStyle Hidden は WSL に必要なコンソールを提供できないため
+# WScript.Shell.Run(cmd, 0, false) を使う（0 = 非表示、false = 非同期）
+$bashCmd = "WEBKIT_DISABLE_COMPOSITING_MODE=1 RUST_LOG=warn $wslAppPath"
+$wsh = New-Object -ComObject WScript.Shell
+$wsh.Run("wsl -d $WslDist bash -c ""$bashCmd""", 0, $false)
