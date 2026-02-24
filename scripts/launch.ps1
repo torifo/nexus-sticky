@@ -10,9 +10,9 @@ param(
     [string]$AppBin  = "nexus-sticky"
 )
 
-# WSL 内でバイナリパスを自動検索（ユーザー名に依存しない）
+# WSL 内でバイナリパスを自動検索（release → debug の順で優先）
 $wslAppPath = wsl -d $WslDist -- bash --norc --noprofile -c `
-    "which $AppBin 2>/dev/null || find ~/devops -name '$AppBin' -type f 2>/dev/null | head -1"
+    "which $AppBin 2>/dev/null || find ~/devops -path '*/release/$AppBin' -type f 2>/dev/null | head -1 || find ~/devops -path '*/debug/$AppBin' -type f 2>/dev/null | head -1"
 
 if (-not $wslAppPath) {
     Write-Error "$AppBin not found in WSL '$WslDist'."

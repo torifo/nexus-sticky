@@ -79,26 +79,63 @@ make build-release  # リリースビルド
 
 ## 起動方法
 
-### WSL 端末から
+### Windows（WSL2 経由）
 
-```bash
-WEBKIT_DISABLE_COMPOSITING_MODE=1 ./src-tauri/target/debug/nexus-sticky
+> Windows をメイン環境として使う場合の推奨方法です。
+
+**ダブルクリックで起動:**
 ```
-
-### Windows から（WSL2 経由）
-
-```bat
 scripts\launch.bat
 ```
 
-または PowerShell:
-
+**PowerShell から:**
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\launch.ps1
 ```
 
-**Windows スタートアップ登録**（自動起動）:
-`Win + R` → `shell:startup` → `launch.bat` のショートカットを配置
+**スタートアップ登録（ログイン時に自動起動）:**
+1. `Win + R` → `shell:startup` を開く
+2. `launch.bat` のショートカットをそこに配置
+
+**ログ確認:**
+```powershell
+wsl -d Ubuntu -- cat /tmp/nexus-sticky.log
+```
+
+**強制終了:**
+```powershell
+wsl -d Ubuntu -- pkill nexus-sticky
+```
+
+---
+
+### WSL2 端末
+
+**セットアップ後はエイリアスで起動（推奨）:**
+```bash
+nexus-sticky
+```
+> `scripts/setup-wsl.sh` 実行後に `~/.bashrc` へ自動登録されます。
+> 新しい端末を開くか `source ~/.bashrc` を実行してから使用してください。
+
+**直接起動（リリースビルド）:**
+```bash
+WEBKIT_DISABLE_COMPOSITING_MODE=1 ~/devops/nexus-sticky/src-tauri/target/release/nexus-sticky
+```
+
+**デバッグモードで起動（ログを端末に表示）:**
+```bash
+WEBKIT_DISABLE_COMPOSITING_MODE=1 RUST_LOG=debug ~/devops/nexus-sticky/src-tauri/target/debug/nexus-sticky
+```
+
+**WSLg スタートメニューから起動:**
+`setup-wsl.sh` を実行すると Windows のスタートメニューに「Nexus Sticky」が表示されます。
+
+**システム全体にインストール（`nexus-sticky` をどこからでも実行可能）:**
+```bash
+cd ~/devops/nexus-sticky && make install
+# → /usr/local/bin/nexus-sticky にインストールされます
+```
 
 ---
 

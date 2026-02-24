@@ -11,8 +11,8 @@ setlocal
 set WSL_DIST=Ubuntu
 set APP_BIN=nexus-sticky
 
-:: WSL 内でのアプリパスを自動解決（ユーザー名に依存しない）
-for /f "delims=" %%i in ('wsl -d %WSL_DIST% -- bash --norc --noprofile -c "which %APP_BIN% 2>/dev/null || find ~/devops -name %APP_BIN% -type f 2>/dev/null | head -1"') do set WSL_APP_PATH=%%i
+:: WSL 内でのアプリパスを自動解決（release → debug の順で優先）
+for /f "delims=" %%i in ('wsl -d %WSL_DIST% -- bash --norc --noprofile -c "which %APP_BIN% 2>/dev/null || find ~/devops -path '*/release/%APP_BIN%' -type f 2>/dev/null | head -1 || find ~/devops -path '*/debug/%APP_BIN%' -type f 2>/dev/null | head -1"') do set WSL_APP_PATH=%%i
 
 if "%WSL_APP_PATH%"=="" (
     echo [ERROR] %APP_BIN% not found in WSL.
