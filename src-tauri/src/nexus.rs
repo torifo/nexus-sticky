@@ -1,21 +1,13 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::error::NexusError;
 use crate::event::{EventBus, StickyEvent};
 use crate::validator::WindowValidator;
-use crate::workspace::{WindowData, Workspace};
-
-/// 閉じた付箋の履歴レコード（タイムスタンプ・プレビュー付き）
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ClosedWindowRecord {
-    pub data: WindowData,
-    pub closed_at: u64,  // Unix タイムスタンプ（秒）
-    pub preview: String, // 先頭40文字のプレビュー
-}
+use crate::workspace::{self, ClosedWindowRecord, WindowData, Workspace};
 
 pub const DEFAULT_COLOR: &str = "#FFEB3B"; // Requirement 12.4
 pub const DEFAULT_OPACITY: f64 = 0.95;     // Requirement 5.3
@@ -101,16 +93,23 @@ pub struct NexusManager {
     app_handle: AppHandle,
     state: Arc<Mutex<AppState>>,
     event_bus: Arc<EventBus>,
+    data_dir: PathBuf,
 }
 
 impl NexusManager {
-    pub fn new(app_handle: AppHandle, state: Arc<Mutex<AppState>>) -> Self {
+    pub fn new(app_handle: AppHandle, state: Arc<Mutex<AppState>>, data_dir: PathBuf) -> Self {
         let event_bus = Arc::new(EventBus::new(app_handle.clone()));
         NexusManager {
             app_handle,
             state,
             event_bus,
+            data_dir,
         }
+    }
+
+    /// アプリデータディレクトリを返す（ワークスペース・履歴の保存場所）
+    pub fn data_dir(&self) -> &std::path::Path {
+        &self.data_dir
     }
 
     #[allow(dead_code)]
@@ -194,7 +193,7 @@ impl NexusManager {
 
     /// ウィンドウを追跡リストから削除して閉じる (Requirement 2.3)
     pub fn remove_window(&self, window_id: &str) -> Result<(), NexusError> {
-        {
+        let records_snapshot = {
             let mut state = self.state.lock().unwrap();
             if let Some(window_state) = state.windows.remove(window_id) {
                 let closed_at = SystemTime::now()
@@ -212,6 +211,13 @@ impl NexusManager {
                 }
             }
             // 既に存在しない場合もエラーにしない（二重削除対策）
+            state.recently_closed.clone()
+        };
+
+        // ロック解放後に履歴をディスクへ保存
+        let history_path = self.data_dir.join("history.json");
+        if let Err(e) = workspace::save_history(&history_path, &records_snapshot) {
+            log::warn!("Failed to persist history: {}", e);
         }
 
         if let Some(window) = self.app_handle.get_webview_window(window_id) {

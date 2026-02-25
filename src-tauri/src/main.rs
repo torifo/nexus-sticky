@@ -12,8 +12,8 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State, WebviewWindow};
 
 use error::NexusError;
-use nexus::{AppState, ClosedWindowRecord, NexusManager};
-use workspace::WorkspaceManager;
+use nexus::{AppState, NexusManager};
+use workspace::{ClosedWindowRecord, WorkspaceManager};
 
 // ─────────────────────────────────────────────
 // Tauri Commands
@@ -156,20 +156,31 @@ fn main() {
         .setup(|app| {
             let app_handle: AppHandle = app.handle().clone();
 
-            // AppState を初期化して管理下に置く
+            // --resume フラグを確認（WSL での履歴選択起動）
+            let resume_mode = std::env::args().any(|a| a == "--resume");
+
+            // データディレクトリを解決（WSL: Windows AppData 共有、Windows: Tauri デフォルト）
+            let data_dir = workspace::resolve_app_data_dir(&app_handle);
+            log::info!("App data dir: {:?}", data_dir);
+
+            // 保存済み履歴を読み込んで AppState に反映
+            let history = workspace::load_history(&data_dir.join("history.json"));
             let app_state = Arc::new(Mutex::new(AppState::new()));
+            if !history.is_empty() {
+                log::info!("Loaded {} history records from disk", history.len());
+                app_state.lock().unwrap().recently_closed = history;
+            }
             app.manage(app_state.clone());
 
             // NexusManager を初期化して管理下に置く
-            let nexus = Arc::new(NexusManager::new(app_handle.clone(), app_state));
+            let nexus = Arc::new(NexusManager::new(app_handle.clone(), app_state, data_dir.clone()));
             app.manage(nexus.clone());
 
             // システムトレイを構築する (Requirement 6.1)
             tray::build_tray(&app_handle)?;
 
             // 保存済みワークスペースを読み込んで復元する (Requirement 7.6, 7.7)
-            let app_dir = app.path().app_data_dir()?;
-            let workspace_manager = WorkspaceManager::new(app_dir);
+            let workspace_manager = WorkspaceManager::new(data_dir);
 
             match workspace_manager.load_workspace() {
                 Ok(workspace) if !workspace.windows.is_empty() => {
@@ -179,12 +190,26 @@ fn main() {
                             log::error!("Failed to restore window: {}", e);
                         }
                     }
+                    // --resume: ワークスペース復元に加えて履歴ウィンドウも表示
+                    if resume_mode {
+                        if let Err(e) = nexus.open_history_window() {
+                            log::error!("Failed to open history window on resume: {}", e);
+                        }
+                    }
                 }
                 Ok(_) => {
-                    // 初回起動またはワークスペースが空の場合
-                    log::info!("No saved windows, creating initial sticky");
-                    if let Err(e) = nexus.create_sticky_window(None) {
-                        log::error!("Failed to create initial sticky: {}", e);
+                    if resume_mode {
+                        // --resume: 空白付箋の代わりに履歴ウィンドウを表示
+                        log::info!("Resume mode: opening history window");
+                        if let Err(e) = nexus.open_history_window() {
+                            log::error!("Failed to open history window: {}", e);
+                        }
+                    } else {
+                        // 初回起動またはワークスペースが空の場合
+                        log::info!("No saved windows, creating initial sticky");
+                        if let Err(e) = nexus.create_sticky_window(None) {
+                            log::error!("Failed to create initial sticky: {}", e);
+                        }
                     }
                 }
                 Err(e) => {

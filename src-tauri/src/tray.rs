@@ -98,11 +98,9 @@ fn handle_menu_event(app: &AppHandle, event_id: &str) {
         "quit" => {
             log::info!("Tray: saving workspace and quitting");
             let workspace = nexus.collect_workspace();
-            if let Ok(app_dir) = app.path().app_data_dir() {
-                let manager = WorkspaceManager::new(app_dir);
-                if let Err(e) = manager.save_workspace(&workspace) {
-                    log::error!("Tray: failed to save workspace on quit: {}", e);
-                }
+            let manager = WorkspaceManager::new(nexus.data_dir().to_path_buf());
+            if let Err(e) = manager.save_workspace(&workspace) {
+                log::error!("Tray: failed to save workspace on quit: {}", e);
             }
             app.exit(0);
         }

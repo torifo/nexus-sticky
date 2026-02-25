@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::NexusError;
 
@@ -8,6 +8,14 @@ use crate::error::NexusError;
 pub struct Workspace {
     pub version: String,
     pub windows: Vec<WindowData>,
+}
+
+/// 閉じた付箋の履歴レコード（タイムスタンプ・プレビュー付き）
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ClosedWindowRecord {
+    pub data: WindowData,
+    pub closed_at: u64,  // Unix タイムスタンプ（秒）
+    pub preview: String, // 先頭40文字のプレビュー
 }
 
 /// 個別の付箋ウィンドウの永続化データ
@@ -81,6 +89,81 @@ impl WorkspaceManager {
         );
         Ok(workspace)
     }
+}
+
+/// 閉じた付箋の履歴を JSON ファイルに保存する
+pub fn save_history(path: &Path, records: &[ClosedWindowRecord]) -> Result<(), NexusError> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let json = serde_json::to_string_pretty(records)
+        .map_err(|e| NexusError::SerializationFailed(e.to_string()))?;
+    std::fs::write(path, json)?;
+    Ok(())
+}
+
+/// JSON ファイルから閉じた付箋の履歴を読み込む（ファイルがなければ空リスト）
+pub fn load_history(path: &Path) -> Vec<ClosedWindowRecord> {
+    if !path.exists() {
+        return Vec::new();
+    }
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|json| serde_json::from_str(&json).ok())
+        .unwrap_or_default()
+}
+
+/// アプリデータディレクトリを解決する
+///
+/// 優先順位:
+///   1. 環境変数 `NEXUS_DATA_DIR`（明示的なオーバーライド）
+///   2. WSL 環境の自動検出 → Windows AppData を /mnt/c/... 経由で参照
+///   3. Tauri デフォルト（Windows: %APPDATA%\com.nexus.sticky、Linux: ~/.local/share/com.nexus.sticky）
+///
+/// WSL / Windows .exe の両方が同一ディレクトリを参照することで履歴・ワークスペースを共有できる。
+pub fn resolve_app_data_dir(app: &tauri::AppHandle) -> PathBuf {
+    use tauri::Manager;
+
+    // 1. 環境変数オーバーライド
+    if let Ok(dir) = std::env::var("NEXUS_DATA_DIR") {
+        let path = PathBuf::from(&dir);
+        log::info!("Data dir from NEXUS_DATA_DIR: {:?}", path);
+        return path;
+    }
+
+    // 2. WSL 環境の自動検出
+    if Path::new("/proc/sys/fs/binfmt_misc/WSLInterop").exists() {
+        log::info!("WSL detected, resolving Windows AppData path via cmd.exe");
+        if let Ok(out) = std::process::Command::new("cmd.exe")
+            .args(["/c", "echo %APPDATA%"])
+            .output()
+        {
+            let appdata = String::from_utf8_lossy(&out.stdout)
+                .trim_end_matches(['\r', '\n', ' '])
+                .to_string();
+            if !appdata.is_empty() && !appdata.contains('%') {
+                if let Ok(wsl_out) = std::process::Command::new("wslpath")
+                    .arg(&appdata)
+                    .output()
+                {
+                    let wsl_path = String::from_utf8_lossy(&wsl_out.stdout)
+                        .trim()
+                        .to_string();
+                    if !wsl_path.is_empty() {
+                        let path = PathBuf::from(wsl_path).join("com.nexus.sticky");
+                        log::info!("Resolved WSL data dir: {:?}", path);
+                        return path;
+                    }
+                }
+            }
+        }
+        log::warn!("WSL detected but could not resolve Windows AppData, using Tauri default");
+    }
+
+    // 3. Tauri デフォルト
+    app.path()
+        .app_data_dir()
+        .expect("Failed to resolve Tauri app data dir")
 }
 
 #[cfg(test)]

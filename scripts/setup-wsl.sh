@@ -50,13 +50,22 @@ if [ ! -f "src-tauri/icons/icon.ico" ] && [ -f "src-tauri/icons/icon.png" ]; the
 fi
 echo "✓ アイコン準備完了"
 
-# ─── 5. GitHub CLI (gh) のインストール ──────────────────────────────────
+# ─── 5. GitHub CLI + Windows クロスコンパイル用 mingw-w64 ───────────────
 echo ""
-echo "[5/6] GitHub CLI のインストール..."
-if ! command -v gh &>/dev/null; then
-    sudo apt-get install -y gh
+echo "[5/6] 追加ツールのインストール..."
+PKGS=""
+command -v gh &>/dev/null || PKGS="$PKGS gh"
+dpkg -s mingw-w64 &>/dev/null || PKGS="$PKGS mingw-w64"
+if [ -n "$PKGS" ]; then
+    sudo apt-get install -y $PKGS
 fi
 echo "✓ $(gh --version | head -1)"
+echo "✓ mingw-w64 (Windows .exe クロスコンパイル用)"
+
+# Windows ターゲットを rustup に追加（クロスコンパイル用）
+. "$HOME/.cargo/env"
+rustup target add x86_64-pc-windows-gnu 2>/dev/null || true
+echo "✓ Rust ターゲット: x86_64-pc-windows-gnu 追加済み"
 
 # ─── 6. 起動の便利設定 ──────────────────────────────────────────────────
 echo ""
@@ -65,13 +74,15 @@ echo "[6/6] 起動の便利設定..."
 # シェルエイリアス（nexus-sticky コマンドで直接起動できるようにする）
 RELEASE_BIN="$HOME/devops/nexus-sticky/src-tauri/target/release/nexus-sticky"
 ALIAS_LINE="alias nexus-sticky='WEBKIT_DISABLE_COMPOSITING_MODE=1 RUST_LOG=warn $RELEASE_BIN'"
-if ! grep -q "alias nexus-sticky" "$HOME/.bashrc"; then
+if ! grep -q "alias nexus-sticky=" "$HOME/.bashrc"; then
     echo "" >> "$HOME/.bashrc"
     echo "# Nexus Sticky" >> "$HOME/.bashrc"
     echo "$ALIAS_LINE" >> "$HOME/.bashrc"
     echo "✓ ~/.bashrc にエイリアスを追加しました (nexus-sticky)"
 else
-    echo "✓ エイリアスは既に設定済みです"
+    # 既存のエイリアスを最新バイナリパスで更新
+    sed -i "s|alias nexus-sticky=.*|$ALIAS_LINE|" "$HOME/.bashrc"
+    echo "✓ エイリアスを更新しました"
 fi
 
 # WSLg .desktop エントリ（Windows スタートメニューに表示されるようになる）
@@ -96,10 +107,16 @@ echo "================================================"
 echo "✓ セットアップ完了！"
 echo ""
 echo "起動方法:"
-echo "  [WSL端末]  nexus-sticky              # エイリアスで起動"
-echo "  [Windows]  scripts\\launch.bat        # ダブルクリック or スタートアップ登録"
+echo "  [WSL端末]  nexus-sticky              # 通常起動"
+echo "  [WSL端末]  nexus-sticky --resume     # 履歴から付箋を選んで起動"
+echo "  [Windows]  nexus-sticky.exe          # ダブルクリックで起動"
 echo ""
-echo "ビルドコマンド:"
+echo "Windows .exe ビルド:"
+echo "  cd ~/devops/nexus-sticky/src-tauri"
+echo "  cargo build --release --target x86_64-pc-windows-gnu"
+echo "  → target/x86_64-pc-windows-gnu/release/nexus-sticky.exe"
+echo ""
+echo "Linux ビルドコマンド:"
 echo "  cd ~/devops/nexus-sticky"
 echo "  make check          # 型チェック（高速）"
 echo "  make build          # デバッグビルド"
